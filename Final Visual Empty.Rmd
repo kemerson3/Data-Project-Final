@@ -1,0 +1,137 @@
+---
+title: 'Final: Visual Empty'
+author: "Kyle Emerson"
+date: "7/28/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(ggbiplot)
+
+visualempty <- read_csv("C:\\Users\\kjeme\\OneDrive\\Desktop\\Data Project\\Emerson Microbial Exp1_visualempty.csv")
+for (i in 2:ncol(visualempty)) {
+  if (str_detect(visualempty[1,i],"%")) {
+    visualempty[,i] <-as.numeric(strsplit(c(visualempty[[i]]), "%"))
+  }
+}
+
+visempty.df <- visualempty %>%
+  select(`Av. Speed (mm/s)`, `Total Distance (mm)`, `Av. Accel (mm/s^2)`, `Mobility Rate (%)`, `Exploration Rate (%)`, `Total Distance (mm)`, `Time in Center (m:s)`, `Tot. Time Frozen (m:s)`, `Exploration Rate (%)`, 'Time near object (m:s)')
+
+
+visempty.df.ID <- visualempty %>%
+  select(ID)
+
+visempty.df$`Time in Center (m:s)`<- (as.numeric(visempty.df$`Time in Center (m:s)`))/3600
+visempty.df$`Tot. Time Frozen (m:s)`<- (as.numeric(visempty.df$`Tot. Time Frozen (m:s)`))/3600
+visempty.df$`Time near object (m:s)`<- (as.numeric(visempty.df$`Time near object (m:s)`))/3600
+
+
+pca2 <- prcomp(visempty.df, center = TRUE, scale. = TRUE)
+summary(pca2) 
+#str(pca2)
+
+treatment <- c(rep("Colonized", 1),rep("Depleted", 2), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Colonized", 1),
+               rep("Depleted", 1))
+
+ggbiplot(pca2, choices = c(1,2), ellipse=TRUE,obs.scale = 1, var.scale = 1, var.axes = FALSE, groups=treatment) +
+  scale_colour_manual(name="Treatment", values= c("forest green", "dark blue"))+
+  ggtitle("Visual Empty Behavior")+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+Figure 2: Evaluation of Visual Empty Behavior comparing PC1 and PC2. PC1 is comprised of speed, acceleration, total distance, mobility rate and total time frozen. PC2 is comprised of exploration rate.
+
+```{r}
+ggbiplot(pca2, choices = c(2,3), ellipse=TRUE,obs.scale = 1, var.scale = 1, var.axes = FALSE, groups=treatment) +
+  scale_colour_manual(name="Treatment", values= c("forest green", "dark blue"))+
+  ggtitle("Visual Empty Behavior")+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+Figure 3: Evaluation of Visual Empty Behavior comparing PC2 and PC3. PC2 is comprised of exploration rate. PC3 is comprised of time in center and time near object.
+
+```{r}
+ggbiplot(pca2, choices = c(1,3), ellipse=TRUE,obs.scale = 1, var.scale = 1, var.axes = FALSE, groups=treatment) +
+  scale_colour_manual(name="Treatment", values= c("forest green", "dark blue"))+
+  ggtitle("Visual Empty Behavior")+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+Figure 4: Figure 3: Evaluation of Visual Empty Behavior comparing PC1 and PC3. PC1 is comprised of speed, acceleration, total distance, mobility rate and total time frozen. PC3 is comprised of time in center and time near object.
+
+```{r}
+for (i in 1:nrow(visualempty)) {
+  if(str_detect(visualempty$ID[i], "C")) {
+    visualempty$cat[i] <- "C"
+  } else {
+    visualempty$cat[i] <- "D"
+  }
+}
+visualempty$cat <- factor(visualempty$cat)
+
+pca.value <- pca2$x  
+
+pca.value4 <- data.frame(pca.value[,1],visualempty$cat)
+pca.value5 <- data.frame(pca.value[,2],visualempty$cat)
+pca.value6 <- data.frame(pca.value[,3],visualempty$cat)
+
+ttest4_C <- pca.value4 %>%
+  filter(str_detect(visualempty.cat, "C"))
+
+ttest4_D <- pca.value4 %>%
+  filter(str_detect(visualempty.cat, "D"))
+
+ttest4_C <- select(ttest4_C, -visualempty.cat)
+ttest4_D <- select(ttest4_D, -visualempty.cat)
+t.test(ttest4_C, ttest4_D)
+```
+
+Table 3: T-test results comparing treatment effect on PC1 for visual empty behavior. PC1 is comprised of speed, acceleration, total distance, mobility rate and total time frozen. Treatment did not significantly impact the behaviors encompassed by PC1 (p = 0.07662). 
+
+```{r}
+ttest5_C <- pca.value5 %>%
+  filter(str_detect(visualempty.cat, "C"))
+
+ttest5_D <- pca.value5 %>%
+  filter(str_detect(visualempty.cat, "D"))
+
+ttest5_C <- select(ttest5_C, -visualempty.cat)
+ttest5_D <- select(ttest5_D, -visualempty.cat)
+t.test(ttest5_C, ttest5_D)
+```
+
+Table 4: T-test results comparing treatment effect on PC2 for visual empty behavior. PC2 is comprised of exploration rate. Treatment did not significantly impact the behaviors encompassed by PC2 (p = 0.4862). 
+
+```{r}
+ttest6_C <- pca.value6 %>%
+  filter(str_detect(visualempty.cat, "C"))
+
+ttest6_D <- pca.value6 %>%
+  filter(str_detect(visualempty.cat, "D"))
+
+ttest6_C <- select(ttest6_C, -visualempty.cat)
+ttest6_D <- select(ttest6_D, -visualempty.cat)
+t.test(ttest6_C, ttest6_D)
+```
+
+Table 5: T-test results comparing treatment effect on PC3 for visual empty behavior. PC3 is comprised of time in center and time near object. Treatment did not significantly impact the behaviors encompassed by PC3 (p = 0.3231). 
+
+
+Results and Discussion
+
+Based on our analysis, our treatment did not significantly impact behavioral responses to our visual empty stimulus (PC1: p = 0.07662, PC2: p = 0.4862, PC3: p = 0.3231; Tables 3-5). Our treatment effect on PC1 was close to significance, and this PC accounted for ~64% of the variance in the data set, and included our dependent variables of speed, acceleration, total distance, mobility rate and total time frozen. Groups in the depleted treatment clustered left on the x-axis, and based on our rotation values, this indicates that the depleted group had lower speed and acceleration, traveled less total distance, were less mobile and spent more time frozen than the colonized group (PCA2$rotation). This falls in line with our thinking that deplted organisms will have impeded neurodevelopment and alterations to their behavior. While this is not a significant result, it is a trend that can be investigated further. Overall, based on our insignificant results, we refute our hypothesis that treatment effect will alter behavioral responses to a visual (empty) stimuli. 

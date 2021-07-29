@@ -1,0 +1,148 @@
+---
+title: "Final: Baseline"
+author: "Kyle Emerson"
+date: "7/28/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Introduction: 
+
+A host and its associated gut microbiota form a symbiotic relationship that plays a major role in host development (1). In addition, the gut microbiota is part of a bidirectional axis with the brain called the microbiota-gut-brain (MGB) axis (2). Disruptions to the MGB axis are associated with host neurological impairments and changes in behavior (3).
+
+Many environmental factors impact the composition and function of the gut microbiome, with one of the foremost factors being available microbial species pool.  The microbial environment at birth or hatching shapes the gut microbiota which in turn affects host energy acquisition and growth (4). However, it is largely unknown how variation in the local microbial environment during development impacts neurodevelopment and subsequently behavior in larval amphibians.
+
+Amphibians are an ideal model to study how environmental variation shapes the gut microbiota and host neurodevelopment because they develop completely external to the mother. 
+
+We hypothesized that variation in microbial environment affects behavioral responses in larval anurans. 
+
+Methods: 
+
+For this study, we used *Lithobates pipiens* (Northern Leopard frogs) as our model organism. Newly hatched, free swimming tadpoles were randomly assigned to one of two microbial environment treatments: Colonized or Depleted. Colonized treatment consisted of 75% autoclaved, sterilized filtered lab tap water and 25% natural pond water collected from a site where these organisms exist naturally. Depleted treatment consisted of 75% autoclaved, sterilized filtered lab tap water and 25% autoclaved natural pond water. Each treatment had 12 replicates with 5 tadpoles housed together per replicate. After 5 weeks of development, one tadpole from each bin was randomly assigned to undergo behavior testing. Behavior testing consisted of 4 behavioral assays: Baseline, Visual Empty, Visual Food and Olfactory. Baseline has no added stimulus, Visual Empty is the presence of an empty jar, Visual Food is the presence of a jar with the tadpole primary diet, and Olfactory is a positive chemical cue. Dependent variables include: speed, acceleration, distance traveled, mobility rate, exploration rate, time in center, total time frozen and time near added stimulus. Results will be distilled into PCA and analyzed using a t-test. 
+
+Methodology and Results: Baseline
+```{r}
+library(readr)
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(ggbiplot)
+
+baseline <- read_csv("C:\\Users\\kjeme\\OneDrive\\Desktop\\Data Project\\Emerson Microbial Exp1_baseline.csv")
+baseline <- select(baseline, -X24)
+for (i in 2:ncol(baseline)) {
+  if (str_detect(baseline[1,i],"%")) {
+    baseline[,i] <-as.numeric(strsplit(c(baseline[[i]]), "%"))
+  }
+}
+
+```
+First, we imported the data as a .csv file and removed a column of empty information. We then formed a loop to make sure that all of our data is numerical, as some were imported as characters. 
+```{r}
+base.df <- baseline %>%
+  select(`Av. Speed (mm/s)`, `Total Distance (mm)`, `Av. Accel (mm/s^2)`, `Mobility Rate (%)`, `Exploration Rate (%)`, `Total Distance (mm)`, `Time In Center (m:s)`, `Tot. Time Frozen (m:s)`, `Exploration Rate (%)`  )
+
+base.df.ID <- baseline %>%
+  select(ID)
+```
+We then inserted a pipe function in order to filter out the dependent variables of interest into their own seperate data frame. We added another pipe function to filter out the ID tags of each individual for future reference if needed. 
+```{r}
+base.df$`Time In Center (m:s)`<- (as.numeric(base.df$`Time In Center (m:s)`))/3600
+
+base.df$`Tot. Time Frozen (m:s)`<- (as.numeric(base.df$`Tot. Time Frozen (m:s)`))/3600
+```
+Because some of our data was in hms format, we included as.numeric functions to turn our hms into numbers. In this case, we turned the time data into minutes. 
+```{r}
+pca1 <- prcomp(base.df, center = TRUE, scale. = TRUE)
+
+summary(pca1)
+
+#str(pca1)
+```
+Because our dependent variables can be highly correlated, we decided to distill our data into Principal Components. The summary(pca1) command gives us the standard deviation of our principal components and the percentage of variance explained by each principal component. The Rotation column gives us our factor loading scores, i.e. how each dependent variable loads onto which PCA. The $X column gives us our REGR scores, which is a product of linear regression that we will statistically evaluate to see if our microbial treatments significantly impacted each PCA value. 
+```{r}
+treatment <- c(rep("Colonized", 1),rep("Depleted", 2), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Colonized", 1),
+               rep("Depleted", 1))
+```
+We then conducted a c(rep) function to assign treatments to each individual, which will allow us to plot the PCA, with assigned treatments, in a 2 dimensional space.
+```{r}
+ggbiplot(pca1, choices = c(1,2), ellipse=TRUE,obs.scale = 1, var.scale = 1, var.axes = FALSE, groups=treatment) +
+  scale_colour_manual(name="Treatment", values= c("forest green", "dark blue"))+
+  ggtitle("Baseline Behavior")+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+Figure 1: Evaluation of Baseline Behavior comparing PC1 and PC2. PC1 is comprised of speed, acceleration, total distance, mobility rate and total time frozen. PC2 is comprised of exploration rate and time in center.
+
+
+Now that we have plotted our two principal components that explain the majority of the variance within our data set, we want to statistically analyze how treatment impacted our dependent variables, which have now been distilled into PC1 and PC2.
+```{r}
+for (i in 1:nrow(baseline)) {
+  if(str_detect(baseline$ID[i], "C")) {
+    baseline$cat[i] <- "C"
+  } else {
+      baseline$cat[i] <- "D"
+    }
+}
+baseline$cat <- factor(baseline$cat)
+```
+We inserted a loop command with an if, else logic statement to detect the presence of "C" and "D" in the ID column in our original baseline data frame. The C and D stand for colonized and depleted, with the purpose being to detect these letters to filter out individuals in each treatment and assign them into a brand new column within the data frame. This will allow us to seperate our dependent variables of interest into two seperate data frames for each treatment group for statistical analysis.
+```{r}
+pca.value <- pca1$x  
+
+pca.value1 <- data.frame(pca.value[,1],baseline$cat)
+
+pca.value2 <- data.frame(pca.value[,2],baseline$cat)
+
+```
+We next made two more data frames called pca.value1 and pca.value2 that encompassed the REGR scores for both of our PC's of interest, along with our category labels. 
+```{r}
+ttest1_C <- pca.value1 %>%
+  filter(str_detect(baseline.cat, "C"))
+
+ttest1_D <- pca.value1 %>%
+  filter(str_detect(baseline.cat, "D"))
+
+ttest1_C <- select(ttest1_C, -baseline.cat)
+ttest1_D <- select(ttest1_D, -baseline.cat)
+```
+Using a filter command, we filtered out our treatment groups for PC1 into seperate data frames for our ttest. Because R wont run the t-test with the category column present, we removed them from the data frame so they now only contained our REGR scores of interest. 
+```{r}
+t.test(ttest1_C, ttest1_D)
+```
+
+Table 1: T-test results comparing treatment effect on PC1. PC1 is comprised of speed, acceleration, total distance, mobility rate and total time frozen.Treatment did not significantly impact the behaviors encompassed by PC1 (p = 0.9589). 
+```{r}
+ttest2_C <- pca.value2 %>%
+  filter(str_detect(baseline.cat, "C"))
+
+ttest2_D <- pca.value2 %>%
+  filter(str_detect(baseline.cat, "D"))
+ 
+
+ttest2_C <- select(ttest2_C, -baseline.cat)
+ttest2_D <- select(ttest2_D, -baseline.cat)
+t.test(ttest2_C, ttest2_D)
+```
+
+Table 2: T-test results comparing treatment effect on PC2. PC2 is comprised of exploration rate and time in center. Treatment did not significantly impact the behaviors encompassed by PC2 (p = 0.8742). 
+
+Discussion
+
+Based on our analysis, we refute our hypothesis regarding treatment effect on baseline behavior (PC1: 0.9589, PC2: 0.8742; Table 1-2). Our data primarily loaded onto 2 principal components that did not show any discernable trends based on Figure 1. Overall, based on our insignificant results, we refute our hypothesis that treatment effect will alter behavioral responses at baseline without the presence of a novel stimuli. 
+
+This could be due to our microbial treatments not being powerful enough, and future studies could implement higher concentrations of pond water. Microbial profiles have not been analyzed at this time, so we cannot say with confidence that these treatments worked. Previous studies by collaborators confirmed that this concentration worked (Kohl unpublished), but this study used a different model organism. 
+
+Previous Woodley lab studies investigating behavior have used PC analysis and ANOVAs/t-tests to analyze the data. R and RStudio provides a much more streamlined and less tedious process of doing so. Plotting PC's in a 2 dimensional space is a useful tool to see if/how treatments cluster and are a common representation of the data. Future analysis can implement other types of graphs, such as box plots with the ggplot package, to add another visual representation of the data. Overall, this project was a useful introduction to R. As many future studies will evaluate amphibian behavior, this RMarkdown file will serve as a template for future data analysis.  
+
+Works Cited:
+1.Kohl, K.D. and H.V. Carey, A place for host–microbe symbiosis in the comparative physiologist's toolbox. The Journal of Experimental Biology, 2016. 219(22): p. 3496-3504.
+2. Foster, J.A. and K.-A. McVey Neufeld, Gut–brain axis: how the microbiome influences anxiety and depression. Trends in Neurosciences, 2013. 36(5): p. 305-312.
+3. Heijtz, R.D., et al., Normal gut microbiota modulates brain development and behavior. Proceedings of the National Academy of Sciences, 2011. 108(7): p. 3047-3052.
+4. Wu, Z.A. and H.X. Wang, A Systematic Review of the Interaction Between Gut Microbiota and Host Health from a Symbiotic Perspective. SN Comprehensive Clinical Medicine, 2019. 1(3): p. 224-235.

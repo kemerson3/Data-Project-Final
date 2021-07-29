@@ -1,0 +1,138 @@
+---
+title: "Final Visual Food"
+author: "Kyle Emerson"
+date: "7/28/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(readr)
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(ggbiplot)
+
+visualfood <- read_csv("C:\\Users\\kjeme\\OneDrive\\Desktop\\Data Project\\Emerson Microbial Exp1_visualfood.csv")
+for (i in 2:ncol(visualfood)) {
+  if (str_detect(visualfood[1,i],"%")) {
+    visualfood[,i] <-as.numeric(strsplit(c(visualfood[[i]]), "%"))
+  }
+}
+visfood.df <- visualfood %>%
+  select(`Av. Speed (mm/s)`, `Total Distance (mm)`, `Av. Accel (mm/s^2)`, `Mobility Rate (%)`, `Exploration Rate (%)`, `Total Distance (mm)`, `Time in Center (m:s)`, `Tot. Time Frozen (m:s)`, `Exploration Rate (%)`, 'Time near object (m:s)')
+
+visfood.df.ID <- visualfood %>%
+  select(ID)
+
+visfood.df$`Time in Center (m:s)`<- (as.numeric(visfood.df$`Time in Center (m:s)`))/3600
+visfood.df$`Tot. Time Frozen (m:s)`<- (as.numeric(visfood.df$`Tot. Time Frozen (m:s)`))/3600
+visfood.df$`Time near object (m:s)`<- (as.numeric(visfood.df$`Time near object (m:s)`))/3600
+
+pca3 <- prcomp(visfood.df, center = TRUE, scale. = TRUE)
+summary(pca3) 
+#str(pca3)
+
+treatment <- c(rep("Colonized", 1),rep("Depleted", 2), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Colonized", 1),
+               rep("Depleted", 1))
+
+ggbiplot(pca3, choices = c(1,2), ellipse=TRUE,obs.scale = 1, var.scale = 1, var.axes = FALSE, groups=treatment) +
+  scale_colour_manual(name="Treatment", values= c("forest green", "dark blue"))+
+  ggtitle("Visual Food Behavior")+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+Figure 5: Evaluation of Visual Food Behavior comparing PC1 and PC2. PC1 is comprised of speed, acceleration, total distance traveled, mobility rate and total time frozen. PC2 is comprised of exploration rate and time near object.
+
+```{r}
+ggbiplot(pca3, choices = c(2,3), ellipse=TRUE,obs.scale = 1, var.scale = 1, var.axes = FALSE, groups=treatment) +
+  scale_colour_manual(name="Treatment", values= c("forest green", "dark blue"))+
+  ggtitle("Visual Food Behavior")+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+Figure 6: Evaluation of Visual Empty Behavior comparing PC2 and PC3. PC2 is comprised of exploration rate and time near object. PC3 is comprised of time in center.
+
+```{r}
+ggbiplot(pca3, choices = c(1,3), ellipse=TRUE,obs.scale = 1, var.scale = 1, var.axes = FALSE, groups=treatment) +
+  scale_colour_manual(name="Treatment", values= c("forest green", "dark blue"))+
+  ggtitle("Visual Food Behavior")+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+Figure 7: Evaluation of Visual Food Behavior comparing PC1 and PC3. PC1 is comprised of speed, acceleration, total distance traveled, mobility rate and total time frozen. PC3 is comprised of time in center.
+
+```{r}
+for (i in 1:nrow(visualfood)) {
+  if(str_detect(visualfood$ID[i], "C")) {
+    visualfood$cat[i] <- "C"
+  } else {
+    visualfood$cat[i] <- "D"
+  }
+}
+visualfood$cat <- factor(visualfood$cat)
+
+pca.value <- pca3$x 
+
+pca.value7 <- data.frame(pca.value[,1],visualfood$cat)
+pca.value8 <- data.frame(pca.value[,2],visualfood$cat)
+pca.value9 <- data.frame(pca.value[,3],visualfood$cat)
+
+ttest7_C <- pca.value7 %>%
+  filter(str_detect(visualfood.cat, "C"))
+
+ttest7_D <- pca.value7 %>%
+  filter(str_detect(visualfood.cat, "D"))
+
+ttest7_C <- select(ttest7_C, -visualfood.cat)
+ttest7_D <- select(ttest7_D, -visualfood.cat)
+
+t.test(ttest7_C, ttest7_D)
+```
+
+Table 6: T-test results comparing treatment effect on PC1 for visual food behavior. PC1 is comprised of speed, acceleration, total distance traveled, mobility rate and total time frozen. Treatment did not significantly impact the behaviors encompassed by PC1 (p = 0.08456). 
+
+```{r}
+ttest8_C <- pca.value8 %>%
+  filter(str_detect(visualfood.cat, "C"))
+
+ttest8_D <- pca.value8 %>%
+  filter(str_detect(visualfood.cat, "D"))
+
+ttest8_C <- select(ttest8_C, -visualfood.cat)
+ttest8_D <- select(ttest8_D, -visualfood.cat)
+t.test(ttest8_C, ttest8_D)
+```
+
+Table 7: T-test results comparing treatment effect on PC2 for visual empty behavior. PC2 is comprised of exploration rate and time near object. Treatment did not significantly impact the behaviors encompassed by PC2 (p = 0.9727).
+
+```{r}
+ttest9_C <- pca.value9 %>%
+  filter(str_detect(visualfood.cat, "C"))
+
+ttest9_D <- pca.value9 %>%
+  filter(str_detect(visualfood.cat, "D"))
+
+
+ttest9_C <- select(ttest9_C, -visualfood.cat)
+ttest9_D <- select(ttest9_D, -visualfood.cat)
+t.test(ttest9_C, ttest9_D)
+```
+
+Table 8: T-test results comparing treatment effect on PC3 for visual food behavior. PC3 is comprised of time in center. Treatment did not significantly impact the behaviors encompassed by PC3 (p = 0.2669). 
+
+Results and Discussion: 
+
+Based on our analysis, our treatment did not significantly impact behavioral responses to our visual food stimulus (PC1: p = 0.08456, PC2: p = 0.9727, PC3: p = 0.2669; Tables 6-8). Our treatment effect on PC1 was close to significance, and this PC accounted for ~63% of the variance in the data set, and included our dependent variables of speed, acceleration, total distance, mobility rate and total time frozen. Groups in the colonized treatment clustered to the right on the x-axis, and based on our rotation values, this indicates that the colonized group had higher speed and acceleration, traveled more total distance, were more mobile and spent less time frozen than the depleted group (PCA2$rotation). This falls in line with our thinking that deplted organisms will have impeded neurodevelopment and alterations to their behavior. While this is not a significant result like we found with PC1 in our visual empty behavioral assay, it is a trend that can be investigated further. Overall, based on our insignificant results, we refute our hypothesis that treatment effect will alter behavioral responses to a visual (food) stimuli. 
+
+

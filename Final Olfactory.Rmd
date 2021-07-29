@@ -1,0 +1,141 @@
+---
+title: "Final Olfactory"
+author: "Kyle Emerson"
+date: "7/28/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(ggbiplot)
+
+olfactory <- read_csv("C:\\Users\\kjeme\\OneDrive\\Desktop\\Data Project\\Emerson Microbial Exp1_olfactory.csv")
+for (i in 2:ncol(olfactory)) {
+  if (str_detect(olfactory[1,i],"%")) {
+    olfactory[,i] <-as.numeric(strsplit(c(olfactory[[i]]), "%"))
+  }
+}
+
+olfactory.df <- olfactory %>%
+  select(`Av. Speed (mm/s)`, `Total Distance (mm)`, `Av. Accel (mm/s^2)`, `Mobility Rate (%)`, `Exploration Rate (%)`, `Total Distance (mm)`, `Time in Center (m:s)`, `Tot. Time Frozen (m:s)`, `Exploration Rate (%)`, 'Time near cue (m:s)')
+
+olfactory.df.ID <- olfactory %>%
+  select(ID)
+
+olfactory.df$`Time in Center (m:s)`<- (as.numeric(olfactory.df$`Time in Center (m:s)`))/3600
+olfactory.df$`Tot. Time Frozen (m:s)`<- (as.numeric(olfactory.df$`Tot. Time Frozen (m:s)`))/3600
+olfactory.df$`Time near cue (m:s)`<- (as.numeric(olfactory.df$`Time near cue (m:s)`))/3600
+
+pca4 <- prcomp(olfactory.df, center = TRUE, scale. = TRUE)
+summary(pca4) 
+#str(pca4)
+
+treatment <- c(rep("Colonized", 1),rep("Depleted", 2), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1),
+               rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Depleted", 1), rep("Colonized", 1), rep("Colonized", 1),
+               rep("Depleted", 1))
+
+ggbiplot(pca4, choices = c(1,2), ellipse=TRUE,obs.scale = 1, var.scale = 1, var.axes = FALSE, groups=treatment) +
+  scale_colour_manual(name="Treatment", values= c("forest green", "dark blue"))+
+  ggtitle("Olfactory Behavior")+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+Figure 8: Evaluation of Olfactory Behavior comparing PC1 and PC2. PC1 is comprised of speed, acceleration, total distance traveled, mobility rate and total time frozen. PC2 is comprised of time near cue.
+
+```{r}
+ggbiplot(pca4, choices = c(2,3), ellipse=TRUE,obs.scale = 1, var.scale = 1, var.axes = FALSE, groups=treatment) +
+  scale_colour_manual(name="Treatment", values= c("forest green", "dark blue"))+
+  ggtitle("Olfactory Behavior")+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+Figure 9: Evaluation of Visual Empty Behavior comparing PC2 and PC3. PC2 is comprised of time near cue. PC3 is comprised of exploration rate and time in center.
+
+```{r}
+ggbiplot(pca4, choices = c(1,3), ellipse=TRUE,obs.scale = 1, var.scale = 1, var.axes = FALSE, groups=treatment) +
+  scale_colour_manual(name="Treatment", values= c("forest green", "dark blue"))+
+  ggtitle("Olfactory Behavior")+
+  theme_minimal()+
+  theme(legend.position = "bottom")
+```
+
+Figure 10: Evaluation of Olfactory Behavior comparing PC1 and PC3. PC1 is comprised of speed, acceleration, total distance traveled, mobility rate and total time frozen. PC3 is comprised of exploration rate and time in center.
+
+```{r}
+for (i in 1:nrow(olfactory)) {
+  if(str_detect(olfactory$ID[i], "C")) {
+    olfactory$cat[i] <- "C"
+  } else {
+    olfactory$cat[i] <- "D"
+  }
+}
+
+olfactory$cat <- factor(olfactory$cat)
+
+pca.value <- pca4$x  
+
+pca.value10 <- data.frame(pca.value[,1],olfactory$cat)
+pca.value11 <- data.frame(pca.value[,2],olfactory$cat)
+pca.value12 <- data.frame(pca.value[,3],olfactory$cat)
+
+ttest10_C <- pca.value10 %>%
+  filter(str_detect(olfactory.cat, "C"))
+
+ttest10_D <- pca.value10 %>%
+  filter(str_detect(olfactory.cat, "D"))
+
+
+ttest10_C <- select(ttest10_C, -olfactory.cat)
+ttest10_D <- select(ttest10_D, -olfactory.cat)
+
+t.test(ttest10_C, ttest10_D)
+```
+
+Table 9: T-test results comparing treatment effect on PC1 for olfactory behavior. PC1 is comprised of speed, acceleration, total distance traveled, mobility rate and total time frozen. Treatment did not significantly impact the behaviors encompassed by PC1 (p = 0.2154). 
+
+```{r}
+ttest11_C <- pca.value11 %>%
+  filter(str_detect(olfactory.cat, "C"))
+
+ttest11_D <- pca.value11 %>%
+  filter(str_detect(olfactory.cat, "D"))
+
+
+ttest11_C <- select(ttest11_C, -olfactory.cat)
+ttest11_D <- select(ttest11_D, -olfactory.cat)
+t.test(ttest11_C, ttest11_D)
+
+```
+
+Table 10: T-test results comparing treatment effect on PC2 for visual empty behavior. PC2 is comprised of time near cue. Treatment did not significantly impact the behaviors encompassed by PC2 (p = 0.929).
+
+```{r}
+ttest12_C <- pca.value12 %>%
+  filter(str_detect(olfactory.cat, "C"))
+
+ttest12_D <- pca.value12 %>%
+  filter(str_detect(olfactory.cat, "D"))
+
+
+ttest12_C <- select(ttest12_C, -olfactory.cat)
+ttest12_D <- select(ttest12_D, -olfactory.cat)
+t.test(ttest12_C, ttest12_D)
+```
+
+Table 11: T-test results comparing treatment effect on PC3 for visual food behavior. PC3 is comprised of exploration rate and time in center. Treatment did not significantly impact the behaviors encompassed by PC3 (p = 0.5332). 
+
+
+Results and Discussion: 
+
+Based on our analysis, our treatment did not significantly impact behavioral responses to our olfactory stimulus (PC1: p = 0.2154, PC2: p = 0.929, PC3: p = 0.5332; Tables 9-11). This tells us that our olfactory stimuli either was not strong enough to elicit a response, or our treatment did not have a functional consequence on olfactory responses in this particular assay. Our figures for the olfactory test (8-10) did not reveal any discernable clustering trend, so we will refute our hypothesis that treatment altered behavior in response to an olfatory cue. 
